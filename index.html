@@ -105,6 +105,9 @@
         <div id="top-bar">
             <span style="color:#c71585; font-weight:bold;">♟️ Chesszerd</span>
             <div>
+                <button onclick="showHistory()">📜</button>
+                <button onclick="showAchievements()">🏆</button>
+                <button onclick="nextTheme()">🎨</button>
                 <button id="btn-train" onclick="openTraining()">📚 Обучение</button>
                 <button onclick="dailyTask()">📅 Задача</button>
                 <button onclick="toggleTheme()">🌓</button>
@@ -167,6 +170,9 @@
         window.openTraining = function() { if (trainingPanel) trainingPanel.show(); };
         window.closeTraining = function() { if (trainingPanel) trainingPanel.hide(); };
         window.trainOnPGN = function() { if (trainingPanel) trainingPanel.train(); };
+        window.showHistory = function() { if (window.historyViewer) window.historyViewer.showPanel(); };
+        window.showAchievements = function() { const stats = window.achievements.getStats(); alert("Достижения: " + stats.unlocked + " / " + stats.total); };
+        window.nextTheme = function() { if (window.themeManager) { const theme = window.themeManager.next(); window.renderer.setTheme(theme.id); window.renderer.draw(window.board); } };
     </script>
 </body>
 </html>
