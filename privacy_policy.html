@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Политика конфиденциальности | Privacy Policy — Chesszerd</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #0a0a0a; color: #d4d4d4; }
+        h1, h2 { color: #c71585; }
+        .tabs { display: flex; gap: 0; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; background: #1a1a1a; border: 1px solid #333; color: #888; border-radius: 8px 8px 0 0; }
+        .tab.active { background: #2a2a2a; color: #c71585; border-bottom: 2px solid #c71585; }
+        .content { display: none; background: #1a1a1a; padding: 20px; border-radius: 0 8px 8px 8px; }
+        .content.active { display: block; }
+        a { color: #c71585; }
+    </style>
+</head>
+<body>
+    <h1>♟️ Chesszerd — Политика конфиденциальности</h1>
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('ru')">🇷🇺 Русский</button>
+        <button class="tab" onclick="switchTab('en')">🇬🇧 English</button>
+    </div>
+    <div id="ru" class="content active">
+        <h2>Политика конфиденциальности (Русский)</h2>
+        <p><strong>Последнее обновление:</strong> 24 апреля 2026 г.</p>
+        <h3>1. Сбор данных</h3>
+        <p>Chesszerd <strong>не собирает</strong> личные данные. Все данные хранятся локально.</p>
+        <h3>2. Нейросеть</h3>
+        <p>Нейросеть обучается локально на вашем устройстве. Никакие данные не передаются на сервер.</p>
+        <h3>3. Контакты</h3>
+        <p>Email: <a href="mailto:foggez.rfs@gmail.com">foggez.rfs@gmail.com</a></p>
+    </div>
+    <div id="en" class="content">
+        <h2>Privacy Policy (English)</h2>
+        <p><strong>Last updated:</strong> April 24, 2026</p>
+        <h3>1. Data Collection</h3>
+        <p>Chesszerd <strong>does not collect</strong> personal data. All data is stored locally.</p>
+        <h3>2. Neural Network</h3>
+        <p>The neural network trains locally on your device. No data is transmitted to any server.</p>
+        <h3>3. Contact</h3>
+        <p>Email: <a href="mailto:foggez.rfs@gmail.com">foggez.rfs@gmail.com</a></p>
+    </div>
+    <script>
+        function switchTab(lang) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[onclick="switchTab('${lang}')"]`).classList.add('active');
+            document.getElementById(lang).classList.add('active');
+        }
+    </script>
+</body>
+</html>

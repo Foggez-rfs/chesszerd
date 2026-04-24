@@ -1,18 +1,18 @@
-// memory/hogyoku_persistence.js — Хогьёку
-// "Я помню всё. Каждое поражение делает меня сильнее." — Айзен
-
 export class HogyokuPersistence {
-    constructor(adapter) {
-        this.adapter = adapter;
-        this.weights = null;
+    constructor() {
+        this.storageKey = 'hogyoku_weights';
     }
-    async init() {
-        await this.adapter.init();
+    async save(key, data) {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+            return true;
+        } catch(e) { return false; }
     }
-    async saveWeights(weights) {
-        await this.adapter.save('hogyoku_weights', weights);
+    async load(key) {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch(e) { return null; }
     }
-    async loadWeights() {
-        return await this.adapter.load('hogyoku_weights');
-    }
+    async init() { return true; }
 }

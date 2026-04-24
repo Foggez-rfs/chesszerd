@@ -1,54 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>♟️ Chesszerd — Hogyoku Engine</title>
+    <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: #0a0a0a;
-            color: #d4d4d4;
-            font-family: 'Courier New', monospace;
-            overflow: hidden;
-            height: 100vh;
-        }
-        #aizen-quote {
-            text-align: center;
-            padding: 10px;
-            font-size: 14px;
-            color: #c71585;
-            text-shadow: 0 0 10px rgba(199, 21, 133, 0.5);
-            min-height: 40px;
-            transition: color 0.5s ease;
-        }
-        #board-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: calc(100vh - 100px);
-        }
-        canvas {
-            border: 2px solid #333;
-            box-shadow: 0 0 30px rgba(138, 43, 226, 0.3);
-            background: #1a1a1a;
-        }
-        #status {
-            text-align: center;
-            padding: 10px;
-            color: #666;
-            font-size: 12px;
-        }
+        body { background: #0a0a0a; color: #d4d4d4; font-family: 'Courier New', monospace; overflow: hidden; height: 100vh; transition: background 0.5s; }
+        body.light { background: #f5f5dc; color: #333; }
+        #top-bar { display: flex; justify-content: space-between; align-items: center; padding: 8px 15px; background: #111; }
+        body.light #top-bar { background: #e0d5c1; }
+        #top-bar button { background: #333; color: #d4d4d4; border: 1px solid #555; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-family: 'Courier New', monospace; font-size: 14px; }
+        body.light #top-bar button { background: #d4c4a8; color: #333; border-color: #999; }
+        #aizen-quote { text-align: center; padding: 10px; font-size: 14px; color: #c71585; text-shadow: 0 0 10px rgba(199, 21, 133, 0.5); min-height: 40px; transition: color 0.5s; }
+        body.light #aizen-quote { color: #8b0000; text-shadow: none; }
+        #board-container { display: flex; justify-content: center; align-items: center; height: calc(100vh - 120px); }
+        canvas { border: 2px solid #333; box-shadow: 0 0 30px rgba(138, 43, 226, 0.3); border-radius: 4px; }
+        body.light canvas { border-color: #999; box-shadow: 0 0 20px rgba(0,0,0,0.2); }
+        #status { text-align: center; padding: 8px; color: #666; font-size: 11px; }
     </style>
 </head>
 <body>
-    <div id="aizen-quote">"Садись. Покажи мне свою волю."</div>
-    <div id="board-container">
-        <canvas id="board"></canvas>
+    <div id="top-bar">
+        <span style="color:#c71585;">♟️ Chesszerd</span>
+        <div>
+            <button onclick="toggleTheme()">🌓 Тема</button>
+            <button onclick="resetBoard()">🔄 Сброс</button>
+        </div>
     </div>
-    <div id="status">♟️ Chesszerd Engine v1.0 | Hogyoku Core Active</div>
+    <div id="aizen-quote">"Садись. Покажи мне свою волю."</div>
+    <div id="board-container"><canvas id="board"></canvas></div>
+    <div id="status">♟️ Chesszerd v2.0 | Нейросеть активна | ИИ готов</div>
 
-    <!-- Загрузка модулей -->
-    <script type="module" src="main.js"></script>
+    <script type="module">
+        import { Board } from './core/bitboard_engine.js';
+        import { BoardRenderer } from './ui/board_renderer.js';
+        import { ThemeManager } from './ui/theme_manager.js';
+        import { TouchHandler } from './ui/touch_handler.js';
+        import { AizenQuotes } from './ui/aizen_quotes.js';
+        import { AIEngine } from './search/ai_engine.js';
+
+        window.board = new Board();
+        window.board.loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+        
+        const canvas = document.getElementById('board');
+        window.renderer = new BoardRenderer(canvas);
+        window.themeManager = new ThemeManager();
+        window.quotes = new AizenQuotes();
+        window.quotes.setElement(document.getElementById('aizen-quote'));
+        window.ai = new AIEngine(window.board, 3);
+
+        window.renderer.setTheme(window.themeManager.get());
+        window.themeManager.apply();
+        window.renderer.draw(window.board);
+        window.quotes.showOpeningQuote();
+
+        window.touchHandler = new TouchHandler(canvas, window.board, window.renderer, (move) => {
+            setTimeout(() => {
+                const aiMove = window.ai.findBestMove();
+                if (aiMove) {
+                    window.board.makeMove(aiMove);
+                    window.renderer.draw(window.board);
+                    window.quotes.showPressureQuote();
+                }
+            }, 300);
+        });
+
+        window.toggleTheme = () => {
+            const newTheme = window.themeManager.toggle();
+            window.renderer.setTheme(newTheme);
+            window.themeManager.apply();
+            window.renderer.draw(window.board);
+        };
+
+        window.resetBoard = () => {
+            window.board.loadFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+            window.renderer.selectedSquare = -1;
+            window.renderer.legalMoves = [];
+            window.renderer.draw(window.board);
+            window.quotes.showOpeningQuote();
+        };
+    </script>
 </body>
 </html>
