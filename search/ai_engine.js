@@ -1,3 +1,4 @@
+import { OpeningBook } from "../brain/opening_book.js";
 // search/ai_engine.js — ИИ на автономной нейросети
 // "Я просчитываю не ходы. Я просчитываю твою душу." — Айзен
 
@@ -11,11 +12,13 @@ export class AIEngine {
         this.depth = depth;
         this.nn = new NNCore();
         this.inference = new InferenceEngine(board);
-        this.transpositionTable = new Map();
+        this.openingBook = new OpeningBook(); this.transpositionTable = new Map();
     }
 
     // Основной поиск с Alpha-Beta
     findBestMove() {
+        const bookMove = this.openingBook.getBestMove(this.board);
+        if (bookMove) return bookMove;
         const moves = this.getLegalMoves();
         if (moves.length === 0) return null;
         if (moves.length === 1) return moves[0];
