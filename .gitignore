@@ -9,3 +9,5 @@ node_modules/
 build/
 *.log
 FETCH_HEAD
+FETCH_HEAD
+welcome.html
