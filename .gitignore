@@ -1,0 +1,10 @@
+*.keystore
+*.jks
+*.p12
+*.apk
+*.aab
+local.properties
+node_modules/
+.gradle/
+build/
+*.log
