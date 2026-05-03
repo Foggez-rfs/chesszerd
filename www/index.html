@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Chesszerd — Hogyoku Engine</title>
+<style>
+:root {
+  --bg: #0a0a0a; --panel-bg: #1a1a2e; --text: #e0e0ff;
+  --accent: #9b59b6; --gold: #f1c40f;
+  --cell-light: #d4b8d4; --cell-dark: #6b3e6b;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
+  display: flex; justify-content: center; align-items: center; height: 100vh;
+  overflow: hidden;
+}
+#app-container {
+  width: 100%; max-width: 420px; height: 100vh; display: flex; flex-direction: column;
+  background: var(--panel-bg); border-radius: 12px; overflow: hidden;
+}
+.tab-bar {
+  display: flex; background: #2d2d44; padding: 4px;
+}
+.tab-btn {
+  flex:1; text-align:center; padding:10px; color:#aaa; cursor:pointer; font-size:14px;
+}
+.tab-btn.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+.tab-content { display:none; flex:1; overflow-y:auto; padding:8px; }
+#tab-game { display:block; }
+#chessboard {
+  display: grid; grid-template-columns: repeat(8, 1fr); aspect-ratio: 1;
+  margin: 8px auto; width: 95%;
+}
+.cell {
+  display: flex; align-items: center; justify-content: center;
+  font-size: min(6vw, 32px); cursor: pointer; user-select: none;
+}
+.cell.light { background: var(--cell-light); }
+.cell.dark { background: var(--cell-dark); }
+.control-bar { display:flex; gap:8px; padding:8px; }
+button {
+  background: var(--accent); color: white; border: none; padding: 10px 16px;
+  border-radius: 8px; font-weight: bold;
+}
+.aizen-quote { font-style:italic; color: var(--gold); text-align:center; margin:12px; }
+#aizen-avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; display: block; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%239b59b6"/><text x="50" y="65" text-anchor="middle" fill="white" font-size="50">😈</text></svg>') center/cover; }
+</style>
+</head>
+<body>
+<div id="app-container">
+  <div class="tab-bar">
+    <div class="tab-btn active" onclick="ChesszerdApp.switchTab('tab-game')">Игра</div>
+    <div class="tab-btn" onclick="ChesszerdApp.switchTab('tab-profile')">Профиль</div>
+    <div class="tab-btn" onclick="ChesszerdApp.switchTab('tab-quotes')">Айзен</div>
+  </div>
+  <div id="tab-game" class="tab-content">
+    <div id="chessboard"></div>
+    <div class="control-bar">
+      <button id="btn-new-game">Новая игра</button>
+    </div>
+    <div id="aizen-quote" class="aizen-quote"></div>
+  </div>
+  <div id="tab-profile" class="tab-content">
+    <h2>Профиль</h2>
+    <p>ELO: <span id="elo">2200</span></p>
+    <p>Побед: <span id="wins">0</span></p>
+  </div>
+  <div id="tab-quotes" class="tab-content">
+    <h2>Цитаты Айзена</h2>
+    <div id="aizen-avatar"></div>
+    <p id="random-quote">"Добро пожаловать в мою реальность."</p>
+  </div>
+</div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

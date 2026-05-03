@@ -1,0 +1,5 @@
+chesszerd/node_modules/
+chesszerd/platforms/
+chesszerd/plugins/
+chesszerd/*.apk
+!.github/
