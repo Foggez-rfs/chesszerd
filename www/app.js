@@ -1,16 +1,19 @@
+/**
+ * Chesszerd App v1.2 — чистый UI, дерево, NEO, профиль
+ */
 (function () {
   'use strict';
+
   const E = window.ChesszerdEngine;
   let selectedSquare = -1;
-  let playerColor = 0; // 0 – белые
+  let playerColor = 0;
   let gameActive = false;
   let language = 'ru';
+  let currentTheme = 'wood';
+  let currentStyle = 'neo';
+  let audioCtx = null;
 
-  // Настройки
-  let currentTheme = 'wood';   // wood, classic, night, neon
-  let currentStyle = 'neo';    // neo, standard, minimal
-
-  // Аватары (base64 кружочки)
+  // ========== Аватары ==========
   const AVATARS = [
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%23e74c3c"/%3E%3Ctext x="50" y="65" text-anchor="middle" fill="white" font-size="50"%3E👑%3C/text%3E%3C/svg%3E',
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%233498db"/%3E%3Ctext x="50" y="65" text-anchor="middle" fill="white" font-size="50"%3E♛%3C/text%3E%3C/svg%3E',
@@ -20,160 +23,226 @@
     'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="45" fill="%231abc9c"/%3E%3Ctext x="50" y="65" text-anchor="middle" fill="white" font-size="50"%3E♝%3C/text%3E%3C/svg%3E'
   ];
 
-  // Аудио (упрощённый синтез)
-  let audioCtx = null;
-  function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
-  function beep(f,d) {
-    if (!audioCtx) return;
-    let o=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o.type='sine'; o.frequency.value=f; g.gain.value=0.1;
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+d);
-    setTimeout(()=>o.stop(), d*1000+50);
-  }
-
+  // ========== Цитаты ==========
   const QUOTES = {
-    ru: ["Добро пожаловать в мою реальность.","Ты думаешь, что контролируешь доску?","Каждый твой ход ведёт к поражению.","Шахматы — отражение души.","Ты слаб.","Hogyoku эволюционирует.","Интересно... Ты сопротивляешься.","Твоя стратегия — пыль."],
-    en: ["Welcome to my chess reality.","You think you control the board?","Every move leads to defeat.","Chess reflects the soul.","You are weak.","Hogyoku evolves.","Interesting... You resist.","Your strategy is dust."]
+    ru: [
+      "Добро пожаловать в мою шахматную реальность.",
+      "Ты думаешь, что контролируешь доску? Это иллюзия.",
+      "Каждый твой ход ведёт тебя к поражению.",
+      "Шахматы — отражение души. Твоя душа трепещет.",
+      "Ты даже не осознаёшь, насколько ты слаб.",
+      "Моя сила — Hogyoku. Она эволюционирует.",
+      "Интересно... Ты пытаешься сопротивляться.",
+      "Твоя стратегия — всего лишь пыль на моём пути."
+    ],
+    en: [
+      "Welcome to my chess reality.",
+      "You think you control the board? That is an illusion.",
+      "Every move you make leads you to defeat.",
+      "Chess is a reflection of the soul. Your soul trembles.",
+      "You don't even realize how weak you are.",
+      "My power is the Hogyoku. It evolves.",
+      "Interesting... You are trying to resist.",
+      "Your strategy is but dust in my path."
+    ]
   };
+
   function randomQuote() {
-    return (QUOTES[language]||QUOTES.en)[Math.floor(Math.random()*8)];
+    let arr = QUOTES[language] || QUOTES.en;
+    return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  // Рендер доски
+  // ========== Аудио ==========
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  function beep(freq, dur = 0.1) {
+    if (!audioCtx) return;
+    try {
+      let o = audioCtx.createOscillator();
+      let g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.value = 0.08;
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      setTimeout(() => o.stop(), dur * 1000 + 50);
+    } catch(e) {}
+  }
+
+  // ========== Рендер доски ==========
+  function getPieceSymbol(piece, color) {
+    const map = { 1: '♙', 2: '♘', 3: '♗', 4: '♖', 5: '♕', 6: '♔' };
+    let sym = map[piece] || '?';
+    return color === 1 ? sym.toLowerCase() : sym;
+  }
+
   function renderBoard() {
     let boardEl = document.getElementById('chessboard');
     if (!boardEl) return;
     boardEl.innerHTML = '';
     let b = E.board();
-    for (let r=0; r<8; r++) {
-      for (let f=0; f<8; f++) {
-        let sq = r*8+f;
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        let sq = r * 8 + f;
         let piece = b[sq];
         let cell = document.createElement('div');
-        cell.className = `cell ${ (r+f)%2===0 ? 'light' : 'dark' }`;
+        cell.className = 'cell ' + ((r + f) % 2 === 0 ? 'light' : 'dark');
         cell.dataset.sq = sq;
         if (piece !== 0) {
           let col = E.pieceColorAt(sq);
-          let sym = getPieceSymbol(piece, col);
           let span = document.createElement('span');
           span.className = 'piece';
-          span.textContent = sym;
+          span.textContent = getPieceSymbol(piece, col);
           cell.appendChild(span);
         }
-        cell.addEventListener('click', ()=>onSquareClick(sq));
-        cell.addEventListener('touchstart', (e)=>{ e.preventDefault(); onSquareClick(sq); });
+        cell.addEventListener('click', () => onSquareClick(sq));
+        cell.addEventListener('touchstart', (e) => { e.preventDefault(); onSquareClick(sq); });
         boardEl.appendChild(cell);
       }
     }
-    document.getElementById('aizen-quote').textContent = randomQuote();
+    let quoteEl = document.getElementById('aizen-quote');
+    if (quoteEl) quoteEl.textContent = randomQuote();
   }
 
-  function getPieceSymbol(piece, color) {
-    const map = {1:'♙',2:'♘',3:'♗',4:'♖',5:'♕',6:'♔'};
-    let sym = map[piece] || '';
-    if (currentStyle === 'neo') {
-      // NEO стиль – меняем символы на более жирные
-      const neoMap = {1:'♙',2:'♘',3:'♗',4:'♖',5:'♕',6:'♔'};
-      sym = neoMap[piece];
-    } else if (currentStyle === 'minimal') {
-      sym = '●'; // пример
-    }
-    return color === 1 ? sym.toLowerCase() : sym;
-  }
-
-  // Игровые события
+  // ========== Игровая логика ==========
   function onSquareClick(sq) {
-    if (!gameActive || E.sideToMove() !== playerColor) return;
+    if (!gameActive) return;
+    if (E.sideToMove() !== playerColor) return;
+
     if (selectedSquare === -1) {
-      if (E.board()[sq] !== 0 && E.pieceColorAt(sq) === playerColor) selectedSquare = sq;
+      if (E.board()[sq] !== 0 && E.pieceColorAt(sq) === playerColor) {
+        selectedSquare = sq;
+      }
     } else {
       let moves = E.generateMoves(playerColor).filter(m => m.from === selectedSquare && m.to === sq);
       if (moves.length > 0) {
-        let move = moves[0];
-        let captured = E.board()[sq] !== 0;
-        E.makeMove(move);
-        beep(500, 0.1); if (captured) beep(200, 0.2);
+        let captured = E.board()[sq] !== 0 || moves[0].enPassant;
+        E.makeMove(moves[0]);
+        beep(captured ? 200 : 500, captured ? 0.2 : 0.1);
         selectedSquare = -1;
         renderBoard();
-        if (E.sideToMove() !== playerColor) setTimeout(aiMove, 300);
+        if (gameActive && E.sideToMove() !== playerColor) {
+          setTimeout(aiMove, 200);
+        }
       } else {
-        if (E.board()[sq] !== 0 && E.pieceColorAt(sq) === playerColor) selectedSquare = sq;
-        else selectedSquare = -1;
+        if (E.board()[sq] !== 0 && E.pieceColorAt(sq) === playerColor) {
+          selectedSquare = sq;
+        } else {
+          selectedSquare = -1;
+        }
       }
     }
   }
 
   function aiMove() {
     if (!gameActive) return;
-    let best = E.searchBestMove(4);
+    let best = E.searchBestMove(3);
     if (best) {
-      let captured = E.board()[best.to] !== 0;
+      let captured = E.board()[best.to] !== 0 || best.enPassant;
       E.makeMove(best);
-      beep(400, 0.1); if (captured) beep(180, 0.2);
-      selectedSquare = -1;
+      beep(captured ? 180 : 400, captured ? 0.2 : 0.1);
       renderBoard();
       checkGameEnd();
     }
   }
 
   function checkGameEnd() {
-    let moves = E.generateMoves(E.sideToMove());
-    if (moves.length === 0) {
+    if (E.generateMoves(E.sideToMove()).length === 0) {
       gameActive = false;
-      // обновить статистику
-      let profile = getProfile();
-      profile.losses = (profile.losses||0) + 1;
-      saveProfile(profile);
-      updateProfileUI();
+      let kingSq = -1;
+      let b = E.board();
+      let stm = E.sideToMove();
+      for (let i = 0; i < 64; i++) {
+        if (b[i] === 6 && E.pieceColorAt(i) === stm) { kingSq = i; break; }
+      }
+      if (kingSq >= 0) {
+        let attacked = false;
+        let oppMoves = E.generateMoves(1 - stm);
+        for (let m of oppMoves) {
+          if (m.to === kingSq) { attacked = true; break; }
+        }
+        if (attacked) {
+          // Мат
+          if (stm !== playerColor) {
+            // Игрок выиграл
+            updateStats(true);
+          } else {
+            updateStats(false);
+          }
+        } else {
+          // Пат
+        }
+      }
       beep(300, 0.5);
-      E.onPlayerWin?.(); // мутация весов
-      window.dispatchEvent(new CustomEvent('gameEnd', {detail:{result:'loss'}}));
     }
   }
 
-  // Отмена хода (оба хода: игрока и ИИ)
+  function updateStats(playerWin) {
+    let prof = getProfile();
+    if (playerWin) {
+      prof.wins = (prof.wins || 0) + 1;
+      prof.elo = Math.min(3000, (prof.elo || 1200) + 25);
+      E.onPlayerWin?.();
+    } else {
+      prof.losses = (prof.losses || 0) + 1;
+      prof.elo = Math.max(100, (prof.elo || 1200) - 15);
+    }
+    saveProfile(prof);
+    updateProfileUI();
+  }
+
   function undoMove() {
     if (!gameActive) return;
-    // отменяем ход противника и свой
-    if (E.gameHistory().length >= 2 && E.sideToMove() === playerColor) {
-      E.undoMove(); // ход ИИ
-      E.undoMove(); // ход игрока
-      selectedSquare = -1;
-      renderBoard();
+    if (E.sideToMove() === playerColor) return;
+    let hist = E.gameHistory();
+    if (hist.length === 0) return;
+    E.undoMove();
+    if (hist.length > 1 && E.sideToMove() !== playerColor) {
+      E.undoMove();
     }
+    selectedSquare = -1;
+    renderBoard();
   }
 
-  // Профиль (localStorage)
+  // ========== Профиль ==========
   function getProfile() {
     let raw = localStorage.getItem('chesszerd_profile');
     return raw ? JSON.parse(raw) : { name: 'Игрок', avatar: 0, elo: 1200, wins: 0, losses: 0 };
   }
-  function saveProfile(prof) { localStorage.setItem('chesszerd_profile', JSON.stringify(prof)); }
-
+  function saveProfile(p) {
+    localStorage.setItem('chesszerd_profile', JSON.stringify(p));
+  }
   function updateProfileUI() {
     let p = getProfile();
-    document.getElementById('username-input').value = p.name;
-    document.getElementById('elo').textContent = p.elo;
-    document.getElementById('wins').textContent = p.wins;
-    document.getElementById('losses').textContent = p.losses;
-    document.getElementById('profile-greeting').textContent = p.name;
-    // выделить аватар
-    document.querySelectorAll('.avatar-img').forEach((img, idx)=>{
-      img.classList.toggle('selected', idx === p.avatar);
+    let nameInput = document.getElementById('username-input');
+    if (nameInput) nameInput.value = p.name;
+    let eloEl = document.getElementById('elo');
+    if (eloEl) eloEl.textContent = p.elo;
+    let winsEl = document.getElementById('wins');
+    if (winsEl) winsEl.textContent = p.wins;
+    let lossesEl = document.getElementById('losses');
+    if (lossesEl) lossesEl.textContent = p.losses;
+    let greeting = document.getElementById('profile-greeting');
+    if (greeting) greeting.textContent = p.name;
+    document.querySelectorAll('.avatar-img').forEach((img, i) => {
+      img.classList.toggle('selected', i === p.avatar);
     });
   }
 
   function buildAvatarChooser() {
     let grid = document.getElementById('avatar-chooser');
+    if (!grid) return;
     grid.innerHTML = '';
-    AVATARS.forEach((url, idx)=>{
+    AVATARS.forEach((url, i) => {
       let div = document.createElement('div');
       div.className = 'avatar-img';
       div.style.backgroundImage = `url('${url}')`;
-      div.addEventListener('click', ()=>{
+      div.addEventListener('click', () => {
         let p = getProfile();
-        p.avatar = idx;
+        p.avatar = i;
         saveProfile(p);
         updateProfileUI();
       });
@@ -182,7 +251,9 @@
   }
 
   window.saveProfile = function() {
-    let name = document.getElementById('username-input').value.trim();
+    let input = document.getElementById('username-input');
+    if (!input) return;
+    let name = input.value.trim();
     if (!name) return;
     let p = getProfile();
     p.name = name;
@@ -190,41 +261,37 @@
     updateProfileUI();
   };
 
-  // Переключение вкладок
+  // ========== Вкладки ==========
   function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el=>el.style.display='none');
-    document.getElementById(tabId).style.display='block';
-    document.querySelectorAll('.tab-btn').forEach(btn=>{
-      btn.classList.remove('active');
-      if (btn.textContent.trim() === (tabId==='tab-game'?'Игра':tabId==='tab-profile'?'Профиль':'Стиль')) btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    let tab = document.getElementById(tabId);
+    if (tab) tab.style.display = 'block';
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      let label = btn.textContent.trim();
+      let match = (tabId === 'tab-game' && label === 'Игра') ||
+                  (tabId === 'tab-profile' && label === 'Профиль') ||
+                  (tabId === 'tab-settings' && label === 'Стиль');
+      btn.classList.toggle('active', match);
     });
     if (tabId === 'tab-profile') updateProfileUI();
   }
 
-  // Смена темы и стиля
+  // ========== Темы ==========
   function applyTheme(theme) {
     const root = document.documentElement;
-    if (theme === 'wood') {
-      root.style.setProperty('--cell-light','#f0d9b5');
-      root.style.setProperty('--cell-dark','#b58863');
-      root.style.setProperty('--accent','#c8a96e');
-    } else if (theme === 'classic') {
-      root.style.setProperty('--cell-light','#f0f0f0');
-      root.style.setProperty('--cell-dark','#7d7d7d');
-      root.style.setProperty('--accent','#3498db');
-    } else if (theme === 'night') {
-      root.style.setProperty('--cell-light','#4a4a4a');
-      root.style.setProperty('--cell-dark','#1e1e1e');
-      root.style.setProperty('--accent','#9b59b6');
-    } else if (theme === 'neon') {
-      root.style.setProperty('--cell-light','#1a1a2e');
-      root.style.setProperty('--cell-dark','#0f0f23');
-      root.style.setProperty('--accent','#00ffcc');
-    }
+    const themes = {
+      wood:   { light: '#f0d9b5', dark: '#b58863', accent: '#c8a96e' },
+      classic:{ light: '#f0f0f0', dark: '#7d7d7d', accent: '#3498db' },
+      night:  { light: '#4a4a4a', dark: '#1e1e1e', accent: '#9b59b6' },
+      neon:   { light: '#1a1a2e', dark: '#0f0f23', accent: '#00ffcc' }
+    };
+    let t = themes[theme] || themes.wood;
+    root.style.setProperty('--cell-light', t.light);
+    root.style.setProperty('--cell-dark', t.dark);
+    root.style.setProperty('--accent', t.accent);
     currentTheme = theme;
     renderBoard();
-    // подсветить кнопку активной темы
-    document.querySelectorAll('#theme-selector .theme-btn').forEach(b=>{
+    document.querySelectorAll('#theme-selector .theme-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.theme === theme);
     });
   }
@@ -232,52 +299,63 @@
   function applyStyle(style) {
     currentStyle = style;
     renderBoard();
-    document.querySelectorAll('#style-selector .theme-btn').forEach(b=>{
+    document.querySelectorAll('#style-selector .theme-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.style === style);
     });
   }
 
-  // Инициализация
+  function buildSettings() {
+    let themeSel = document.getElementById('theme-selector');
+    if (themeSel) {
+      ['wood', 'classic', 'night', 'neon'].forEach(t => {
+        let btn = document.createElement('button');
+        btn.className = 'theme-btn';
+        btn.dataset.theme = t;
+        btn.textContent = t;
+        btn.addEventListener('click', () => applyTheme(t));
+        themeSel.appendChild(btn);
+      });
+    }
+    let styleSel = document.getElementById('style-selector');
+    if (styleSel) {
+      ['neo', 'standard', 'minimal'].forEach(s => {
+        let btn = document.createElement('button');
+        btn.className = 'theme-btn';
+        btn.dataset.style = s;
+        btn.textContent = s;
+        btn.addEventListener('click', () => applyStyle(s));
+        styleSel.appendChild(btn);
+      });
+    }
+  }
+
+  // ========== Инициализация ==========
   function init() {
     initAudio();
     E.reset();
     playerColor = 0;
     gameActive = true;
     selectedSquare = -1;
-    applyTheme('wood');   // по умолчанию дерево
+    applyTheme('wood');
     applyStyle('neo');
     renderBoard();
     switchTab('tab-game');
     buildAvatarChooser();
+    buildSettings();
     updateProfileUI();
 
-    // Кнопка новой игры
-    document.getElementById('btn-new-game').addEventListener('click', ()=>{
-      E.reset(); gameActive=true; selectedSquare=-1; renderBoard();
-    });
-
-    // Строим селекторы тем и стилей
-    let themeSel = document.getElementById('theme-selector');
-    ['wood','classic','night','neon'].forEach(theme=>{
-      let btn = document.createElement('button');
-      btn.className = 'theme-btn';
-      btn.dataset.theme = theme;
-      btn.textContent = theme;
-      btn.addEventListener('click', ()=>applyTheme(theme));
-      themeSel.appendChild(btn);
-    });
-
-    let styleSel = document.getElementById('style-selector');
-    ['neo','standard','minimal'].forEach(style=>{
-      let btn = document.createElement('button');
-      btn.className = 'theme-btn';
-      btn.dataset.style = style;
-      btn.textContent = style;
-      btn.addEventListener('click', ()=>applyStyle(style));
-      styleSel.appendChild(btn);
-    });
+    let newGameBtn = document.getElementById('btn-new-game');
+    if (newGameBtn) {
+      newGameBtn.addEventListener('click', () => {
+        E.reset();
+        gameActive = true;
+        selectedSquare = -1;
+        renderBoard();
+      });
+    }
   }
 
+  // ========== Экспорт ==========
   window.ChesszerdApp = {
     init,
     switchTab,
