@@ -3,41 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Chesszerd — Hogyoku</title>
+<title>Chesszerd</title>
 <style>
 :root {
-  --bg:#0a0a0a; --panel:#1a1a2e; --text:#e0e0ff; --accent:#9b59b6; --gold:#f1c40f;
-  --light:#d4b8d4; --dark:#6b3e6b;
+  --bg: #1e1e1e; --panel: #2a2a2a; --text: #eee; --accent: #c8a96e; --gold: #f1c40f;
+  --cell-light: #b58863; --cell-dark: #f0d9b5; /* дерево по умолчанию */
+  --piece-color: #000; --piece-shadow: rgba(0,0,0,0.5);
+  --tab-active: var(--accent);
 }
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:var(--bg); color:var(--text); font-family:monospace; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; }
+body {
+  background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif;
+  display: flex; justify-content: center; align-items: center; height: 100vh;
+  margin: 0; overflow: hidden;
+}
 #app-container {
-  width:100%; max-width:420px; height:100vh; display:flex; flex-direction:column;
-  background:var(--panel); border-radius:12px; overflow:hidden;
+  width: 100%; max-width: 420px; height: 100vh; display: flex; flex-direction: column;
+  background: var(--panel); border-radius: 12px; overflow: hidden;
+  position: relative;
 }
-.tab-bar { display:flex; background:#2d2d44; padding:4px; }
-.tab-btn { flex:1; text-align:center; padding:10px; color:#aaa; cursor:pointer; }
-.tab-btn.active { color:var(--accent); border-bottom:2px solid var(--accent); }
-.tab-content { display:none; flex:1; overflow-y:auto; padding:8px; }
-#tab-game { display:block; }
+.tab-bar {
+  display: flex; background: #1a1a1a; padding: 4px; gap: 2px;
+}
+.tab-btn {
+  flex: 1; text-align: center; padding: 10px; color: #aaa; cursor: pointer;
+  font-size: 14px; font-weight: bold; border-radius: 6px 6px 0 0;
+  transition: all 0.2s;
+}
+.tab-btn.active { background: var(--panel); color: var(--accent); }
+.tab-content { display: none; flex: 1; overflow-y: auto; padding: 12px; }
+#tab-game { display: block; }
 
 #chessboard {
-  width: 360px; height: 360px; max-width: 95vw; aspect-ratio: 1/1;
-  margin: 8px auto;
+  width: min(360px, 90vw); height: min(360px, 90vw);
+  margin: 0 auto;
   display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+  border: 3px solid var(--accent); border-radius: 8px; overflow: hidden;
 }
 .cell {
   display: flex; align-items: center; justify-content: center;
-  font-size: 36px; line-height: 1; user-select: none;
+  font-size: min(7vw, 36px); line-height: 1; user-select: none;
+  transition: background 0.1s;
 }
-.cell.light { background: var(--light); }
-.cell.dark { background: var(--dark); }
-.control-bar { display:flex; gap:8px; padding:8px; }
+.cell.light { background: var(--cell-light); }
+.cell.dark { background: var(--cell-dark); }
+.piece {
+  text-shadow: 2px 2px 4px var(--piece-shadow);
+  font-weight: bold;
+}
 button {
-  background:var(--accent); color:white; border:none; padding:10px 16px;
-  border-radius:8px; font-weight:bold; font-family:monospace;
+  background: var(--accent); color: #fff; border: none; padding: 10px 16px;
+  border-radius: 6px; font-weight: bold; cursor: pointer;
+  font-size: 14px;
 }
-.aizen-quote { font-style:italic; color:var(--gold); text-align:center; margin:12px; }
+.control-bar { display: flex; gap: 8px; padding: 8px 0; flex-wrap: wrap; justify-content: center; }
+.aizen-quote { font-style: italic; color: var(--gold); text-align: center; margin: 8px 0; }
+
+/* Профиль */
+.profile-section { text-align: center; }
+.avatar-grid { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0; }
+.avatar-img {
+  width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent;
+  background-size: cover; cursor: pointer; transition: 0.2s;
+}
+.avatar-img.selected, .avatar-img:hover { border-color: var(--accent); }
+
+/* Настройки */
+.theme-selector {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 8px 0;
+}
+.theme-btn {
+  background: #444; color: white; padding: 6px 12px; border-radius: 20px;
+  border: none; cursor: pointer; font-size: 12px;
+}
+.theme-btn.active { background: var(--accent); }
 </style>
 </head>
 <body>
@@ -45,23 +83,42 @@ button {
   <div class="tab-bar">
     <div class="tab-btn active" onclick="ChesszerdApp.switchTab('tab-game')">Игра</div>
     <div class="tab-btn" onclick="ChesszerdApp.switchTab('tab-profile')">Профиль</div>
-    <div class="tab-btn" onclick="ChesszerdApp.switchTab('tab-quotes')">Айзен</div>
+    <div class="tab-btn" onclick="ChesszerdApp.switchTab('tab-settings')">Стиль</div>
   </div>
+
+  <!-- Игра -->
   <div id="tab-game" class="tab-content">
     <div id="chessboard"></div>
     <div class="control-bar">
       <button id="btn-new-game">Новая игра</button>
+      <button onclick="ChesszerdApp.undoMove()">↩ Отменить</button>
     </div>
     <div id="aizen-quote" class="aizen-quote"></div>
   </div>
+
+  <!-- Профиль -->
   <div id="tab-profile" class="tab-content">
-    <h2>Профиль</h2><p>ELO: 2200</p><p>Побед: 0</p>
+    <div class="profile-section">
+      <h2 id="profile-greeting">Игрок</h2>
+      <p>ELO: <span id="elo">1200</span></p>
+      <p>Побед: <span id="wins">0</span> / Поражений: <span id="losses">0</span></p>
+      <div>
+        <label>Имя: <input id="username-input" type="text" placeholder="Введи ник" maxlength="20"></label>
+        <button onclick="ChesszerdApp.saveProfile()">Сохранить</button>
+      </div>
+      <div class="avatar-grid" id="avatar-chooser"></div>
+    </div>
   </div>
-  <div id="tab-quotes" class="tab-content">
-    <h2>Цитаты Айзена</h2>
-    <p id="random-quote">"Добро пожаловать."</p>
+
+  <!-- Настройки стилей -->
+  <div id="tab-settings" class="tab-content">
+    <h3>Тема доски</h3>
+    <div class="theme-selector" id="theme-selector"></div>
+    <h3>Стиль фигур</h3>
+    <div class="theme-selector" id="style-selector"></div>
   </div>
 </div>
+
 <script src="engine.js"></script>
 <script src="app.js"></script>
 </body>
